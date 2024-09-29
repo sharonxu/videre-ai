@@ -1,0 +1,5 @@
+anthropic
+bs4
+openai
+requests
+streamlit
