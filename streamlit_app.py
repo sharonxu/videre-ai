@@ -1,4 +1,5 @@
 import anthropic
+import os
 import requests
 import streamlit as st
 
@@ -6,8 +7,6 @@ from bs4 import BeautifulSoup
 from openai import OpenAI
 
 MODEL_NAME = "claude-3-5-sonnet-20240620"
-ANTHROPIC_API_KEY='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'
-PERPLEXITY_API_KEY = "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"
 
 
 def scrape_website(url):
@@ -67,7 +66,7 @@ def search(query):
         },
     ]
 
-    client = OpenAI(api_key=PERPLEXITY_API_KEY, base_url="https://api.perplexity.ai")
+    client = OpenAI(api_key=os.environ['PERPLEXITY_API_KEY'], base_url="https://api.perplexity.ai")
     response = client.chat.completions.create(
         model="llama-3.1-sonar-small-128k-online",
         messages=messages,
@@ -92,6 +91,8 @@ def analyze(client, site_text, search_text, max_tokens=8192):
 
 
 def main():
+    os.environ['ANTHROPIC_API_KEY'] = st.secrets['ANTHROPIC_API_KEY']
+    os.environ['PERPLEXITY_API_KEY'] = st.secrets['PERPLEXITY_API_KEY']
     st.title("Seeing the Sites")
 
     with st.form(key='site_analyzer'):
@@ -99,7 +100,7 @@ def main():
         submit_button = st.form_submit_button(label='Submit')
 
     if submit_button:
-        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        client = anthropic.Anthropic(api_key=os.environ['ANTHROPIC_API_KEY'])
         scraped_text = scrape_website(url)
         query = get_query(client=client, text=scraped_text)
         search_results = search(query)
