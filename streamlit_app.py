@@ -51,10 +51,12 @@ def search(query):
         {
             "role": "system",
             "content": (
-                "You are an artificial intelligence assistant and you need to "
-                "give the following:"
-                "1. A helpful, detailed summary for a user's query. Be concise and to the point."
-                "2. A list of source URLs for all your information."
+                """You are an artificial intelligence assistant and you need to 
+                give the following:
+                1. A comprehensive summary of all the results from the user's query.
+                2. A list of references for all external sources. Be sure to include the URL.
+                For each reference, use the following format:
+                "<Title>". <Publication>, <Date Published>. <Authors>. <URL>"""
             ),
         },
         {
@@ -66,7 +68,6 @@ def search(query):
     ]
 
     client = OpenAI(api_key=PERPLEXITY_API_KEY, base_url="https://api.perplexity.ai")
-
     response = client.chat.completions.create(
         model="llama-3.1-sonar-small-128k-online",
         messages=messages,
@@ -111,7 +112,7 @@ def main():
         
         st.header(query.title())
         st.write(analysis)
-        st.header("External Search Results")
+        st.write("Summary of External Sources:")
         st.write(search_results)
 
 
