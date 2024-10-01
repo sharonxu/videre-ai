@@ -50,12 +50,16 @@ def search(query):
         {
             "role": "system",
             "content": (
-                """You are an artificial intelligence assistant and you need to 
-                give the following:
-                1. A comprehensive summary of all the results from the user's query.
-                2. A list of references for all external sources. Be sure to include the URL.
-                For each reference, use the following format:
-                "<Title>". <Publication>, <Date Published>. <Authors>. <URL>"""
+                """You are a search engine AI. Run a search on the user's query and output the following:
+                1. Summary: A comprehensive summary of all the results from the user's query.
+                2. References: A list of references for all external sources.
+                It is VERY IMPORTANT that you include the URL for each reference.
+                Use the following format:
+                "<Title>". <Publication>, <Date Published>. <Authors>. <URL>
+                The URL should be clickable andstart with 'https://www.'
+                
+                For example: "Biden Will Visit Appalachia Region Ravaged by Hurricane Helene". The New York Times, 2024-09-30. https://www.nytimes.com/2024/09/30/us/biden-helene-north-carolina.html
+                """
             ),
         },
         {
@@ -75,16 +79,22 @@ def search(query):
     return response.choices[0].message.content
 
 
-def analyze(client, site_text, search_text, max_tokens=8192):
+def summarize(client, site_text, max_tokens=2048):
+    return get_completion(
+        client=client,        
+        prompt=f"""Summarize the contents of this website: <website>{site_text}</website>
+        """,
+        max_tokens=max_tokens,
+    )[0].text.split(':', 1)[1]
+
+
+def compare(client, site_text, search_text, max_tokens=4096):
     return get_completion(
         client=client,        
         prompt=f"""Here are the contents of a website: <website>{site_text}</website>
-
         Here are the results of a search on the topic: <search>{search_text}</search>
-    
-        Create a separate section for each of the following:
-        Website Summary: Summarize the contents of the website.
-        Comparison with External Sources: Compare the information in the website to the search results.
+        Compare the information in the website to the search results.
+        Be as comprehensive and accurate as possible with all relevant details.
         """,
         max_tokens=max_tokens,
     )[0].text.split(':', 1)[1]
@@ -93,7 +103,9 @@ def analyze(client, site_text, search_text, max_tokens=8192):
 def main():
     os.environ['ANTHROPIC_API_KEY'] = st.secrets['ANTHROPIC_API_KEY']
     os.environ['PERPLEXITY_API_KEY'] = st.secrets['PERPLEXITY_API_KEY']
+
     st.title("Seeing the Sites")
+    st.write("Enter the URL of a website to see a summary and comparison with external sources.")
 
     with st.form(key='site_analyzer'):
         url = st.text_input(label='Site URL')
@@ -102,21 +114,24 @@ def main():
     if submit_button:
         client = anthropic.Anthropic(api_key=os.environ['ANTHROPIC_API_KEY'])
         scraped_text = scrape_website(url)
+        summary = summarize(client=client, site_text=scraped_text)
         query = get_query(client=client, text=scraped_text)
         search_results = search(query)
-        analysis = analyze(client=client, site_text=scraped_text, search_text=search_results)
+        comparison = compare(client=client, site_text=scraped_text, search_text=search_results)
 
-        print({
-            "query": query,
-            "analysis": analysis
-            })
+        print(f"Query:\n{query}\n")
+        print(f"Summary:\n{summary}\n")
+        print(f"Comparison:\n{comparison}\n")
+        print(f"Search Results:\n{search_results}")
+        references = search_results.split('References')[-1]
         
         st.header(query.title())
-        st.write(analysis)
-        st.write("Summary of External Sources:")
-        st.write(search_results)
-
-
+        st.header("Website Summary")
+        st.write(summary)
+        st.header("Comparison with External Sources")
+        st.write(comparison)
+        st.header("References")
+        st.write(references)
 
 if __name__ == "__main__":
     main()
